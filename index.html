@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .board { display: grid; grid-template-columns: repeat(3, 100px); gap: 5px; margin: 20px auto; width: 315px; }
+        .cell { width: 100px; height: 100px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; font-size: 2em; cursor: pointer; }
+        .cell:hover { background-color: #f0f0f0; }
+        #status { margin: 20px; font-size: 1.2em; }
+    </style>
+</head>
+<body>
+    <h1>Tic Tac Toe</h1>
+    <div id="status">Loading...</div>
+    <div class="board" id="board">
+        <div class="cell" data-row="0" data-col="0"></div>
+        <div class="cell" data-row="0" data-col="1"></div>
+        <div class="cell" data-row="0" data-col="2"></div>
+        <div class="cell" data-row="1" data-col="0"></div>
+        <div class="cell" data-row="1" data-col="1"></div>
+        <div class="cell" data-row="1" data-col="2"></div>
+        <div class="cell" data-row="2" data-col="0"></div>
+        <div class="cell" data-row="2" data-col="1"></div>
+        <div class="cell" data-row="2" data-col="2"></div>
+    </div>
+    <button id="reset">Reset Game</button>
+
+    <script>
+        let playerName = prompt("Enter your name:");
+        let playerCount = Math.floor(Math.random() * 100) + 1; // Mock online count
+        document.getElementById('status').textContent = `Welcome, ${playerName}! Current players online: ${playerCount}`;
+
+        const board = Array(3).fill().map(() => Array(3).fill(''));
+        let currentPlayer = 'X';
+        let gameOver = false;
+
+        const cells = document.querySelectorAll('.cell');
+        const status = document.getElementById('status');
+        const resetBtn = document.getElementById('reset');
+
+        function checkWinner(player) {
+            // Check rows, columns, diagonals
+            for (let i = 0; i < 3; i++) {
+                if (board[i].every(cell => cell === player) || board.every(row => row[i] === player)) return true;
+            }
+            if (board[0][0] === player && board[1][1] === player && board[2][2] === player) return true;
+            if (board[0][2] === player && board[1][1] === player && board[2][0] === player) return true;
+            return false;
+        }
+
+        function isFull() {
+            return board.flat().every(cell => cell !== '');
+        }
+
+        function handleClick(e) {
+            if (gameOver) return;
+            const row = e.target.dataset.row;
+            const col = e.target.dataset.col;
+            if (board[row][col] !== '') return;
+
+            board[row][col] = currentPlayer;
+            e.target.textContent = currentPlayer;
+
+            if (checkWinner(currentPlayer)) {
+                status.textContent = `${playerName} (${currentPlayer}) wins!`;
+                gameOver = true;
+            } else if (isFull()) {
+                status.textContent = "It's a tie!";
+                gameOver = true;
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                status.textContent = `${playerName} (${currentPlayer}), your turn.`;
+            }
+        }
+
+        function resetGame() {
+            board.forEach(row => row.fill(''));
+            cells.forEach(cell => cell.textContent = '');
+            currentPlayer = 'X';
+            gameOver = false;
+            status.textContent = `${playerName} (${currentPlayer}), your turn.`;
+        }
+
+        cells.forEach(cell => cell.addEventListener('click', handleClick));
+        resetBtn.addEventListener('click', resetGame);
+
+        // Initial status
+        status.textContent = `${playerName} (${currentPlayer}), your turn.`;
+    </script>
+</body>
+</html>
