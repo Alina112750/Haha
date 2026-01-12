@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Tic Tac Toe</title>
+    <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .board { display: grid; grid-template-columns: repeat(3, 100px); gap: 5px; margin: 20px auto; width: 315px; }
+        .cell { width: 100px; height: 100px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; font-size: 2em; cursor: pointer; }
+        .cell:hover { background-color: #f0f0f0; }
+        #status { margin: 20px; font-size: 1.2em; }
+        input { margin: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Online Tic Tac Toe</h1>
+    <div id="status">Enter a room ID and your name to join!</div>
+    <input type="text" id="roomInput" placeholder="Room ID (e.g., 'game123')">
+    <input type="text" id="nameInput" placeholder="Your Name">
+    <button id="joinBtn">Join Room</button>
+    <div class="board" id="board" style="display: none;">
+        <div class="cell" data-row="0" data-col="0"></div>
+        <div class="cell" data-row="0" data-col="1"></div>
+        <div class="cell" data-row="0" data-col="2"></div>
+        <div class="cell" data-row="1" data-col="0"></div>
+        <div class="cell" data-row="1" data-col="1"></div>
+        <div class="cell" data-row="1" data-col="2"></div>
+        <div class="cell" data-row="2" data-col="0"></div>
+        <div class="cell" data-row="2" data-col="1"></div>
+        <div class="cell" data-row="2" data-col="2"></div>
+    </div>
+    <button id="reset" style="display: none;">Reset Game</button>
+
+    <script>
+        const socket = io();
+        let playerName = '';
+        let room = '';
+        let currentPlayer = 'X';
+        let mySymbol = '';
+        let gameOver = false;
+        const board = Array(3).fill().map(() => Array(3).fill(''));
+        const cells = document.querySelectorAll('.cell');
+        const status = document.getElementById('status');
+        const boardDiv = document.getElementById('board');
+        const resetBtn = document.getElementById('reset');
+
+        document.getElementById('joinBtn').addEventListener('click', () => {
+            room = document.getElementById('roomInput').value.trim();
+            playerName = document.getElementById('nameInput').value.trim();
+            if (!room || !playerName) return alert('Enter room and name!');
+            socket.emit('joinRoom', room);
+            boardDiv.style.display = 'grid';
+            resetBtn.style.display = 'block';
+            status.textContent = `Joined room ${room}. Waiting for another player...`;
+            mySymbol = 'X'; // First joiner is X
+        });
+
+        socket.on('playerJoined', (id) => {
+            status.textContent = `${playerName}, you are ${mySymbol}. It's ${currentPlayer}'s turn.`;
+        });
+
+        socket.on('moveMade', (data) => {
+            board[data.row][data.col] = data.player;
+            document.querySelector(`[data-row="${data.row}"][data-col="${data.col}"]`).textContent = data.player;
+            currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+            if (checkWinner(data.player)) {
+                status.textContent = `${data.playerName} (${data.player}) wins!`;
+                gameOver = true;
+            } else if (isFull()) {
+                status.textContent = "It's a tie!";
+                gameOver = true;
+            } else {
+                status.textContent = `${playerName}, it's ${currentPlayer}'s turn.`;
+            }
+        });
+
+        socket.on('gameReset', () => {
+            resetBoard();
+        });
+
+        function handleClick(e) {
+            if (gameOver || currentPlayer !== mySymbol) return;
+            const row = parseInt(e.target.dataset.row);
+            const col = parseInt(e.target.dataset.col);
+            if (board[row][col] !== '') return;
+            socket.emit('makeMove', { room, row, col, player: mySymbol, playerName });
+        }
+
+        function checkWinner(player) {
+            for (let i = 0; i < 3; i++) {
+                if (board[i].every(cell => cell === player) || board.every(row => row[i] === player)) return true;
+            }
+            if (board[0][0] === player && board[1][1] === player && board[2][2] === player) return true;
+            if (board[0][2] === player && board[1][1] === player && board[2][0] === player) return true;
+            return false;
+        }
+
+        function isFull() {
+            return board.flat().every(cell => cell !== '');
+        }
+
+        function resetBoard() {
+            board.forEach(row => row.fill(''));
+            cells.forEach(cell => cell.textContent = '');
+            currentPlayer = 'X';
+            gameOver = false;
+            status.textContent = `${playerName}, it's ${currentPlayer}'s turn.`;
+        }
+
+        resetBtn.addEventListener('click', () => {
+            socket.emit('resetGame', room);
+            resetBoard();
+        });
+
+        cells.forEach(cell => cell.addEventListener('click', handleClick));
+    </script>
+</body>
+</html>
